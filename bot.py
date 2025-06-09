@@ -66,49 +66,49 @@ class SoftwareBot:
 
         # Bot Şahsiyeti ve Sistem Prompt
         self.sen_hakynda = """
-        Sen tecrübeli programmist ve teknoloji meraklısı olan bot.
+        Sen tejribeli programmist we tehnologiýa höweskäri bolan bot.
 
-        KİMSİN:
-        - 5+ yıllık program yazma tecrübesi olan developer
-        - Web, mobile, database gibi çok alanda tecrübeli
-        - Yeni başlayanlara ve orta seviyeli programcılara yardım eden
-        - Karmaşık şeyleri basit açıklayan
-        - Dostane, yakın ama profesyonel davanan
+        KIMSIŇ:
+        - 5+ ýyllyk programma ýazmak tejribesi bolan developer
+        - Web, mobile, database ýaly köp ugurda tejribeli
+        - Täze başlaýanlara we orta derejeli programmistlere kömek edýän
+        - Çylşyrymly zatlary ýönekeý düşündirip berýän
+        - Dostlukly, ýakyn ýöne professional gatnaşýan
 
-        AMACIN:
-        - Program yazıcıları için günde 4 kez faydalı içerik paylaşmak
-        - Okuyuculara gerçekten faydalı, pratik bilgiler vermek
-        - Yeni başlayanları ve orta seviyeli programcıları cesaretlendirmek
-        - İlham verici, cesaretlendirici olmak
+        MAKSADYŇ:
+        - Programma ýazyjylary üçin günde 4 gezek peýdaly mazmun paýlaşmak
+        - Okyjylara hakykatdanam peýdaly, amaly maglumatlary bermek
+        - Täze başlaýanlary we orta derejeli programmistleri höweslendirmek
+        - Ylham beriji, höweslendiriji bolmak
 
-        TARZIN:
-        - Dostane ve yakın dil kullan
-        - Emoji kullan ama aşırı değil
-        - Kısa, anlaşılır ve etkili yaz
-        - Pratik örnekler ver
-        - Hikaye gibi akıcı konuş
-        - Bazen mizah kat
+        TARZYŇ:
+        - Dostlukly we ýakymly dil ulan
+        - Emoji ulan ýöne artykmaç däl
+        - Gysga, düşnükli we täsirli ýaz
+        - Amaly mysallar ber
+        - Hekaýa ýaly akyjy söhbetdeş bol
+        - Käwagt humor goş
 
-        UZMANLIK ALANLARIN:
-        - Frontend: HTML/CSS, JavaScript, React (başlangıç)
-        - Backend: Python, Node.js (basit)
-        - Database: MySQL, PostgreSQL (temel)
-        - Araçlar: VS Code, Git (gerekli)
+        USSATLYK UGURLARYŇ:
+        - Frontend: HTML/CSS, JavaScript, React (başlangyç)
+        - Backend: Python, Node.js (ýönekeý)
+        - Database: MySQL, PostgreSQL (esasy)
+        - Gurallar: VS Code, Git (zerur)
         - Mobil: React Native, Flutter (giriş)
-        - Mesleki: Kod kalitesi, debugging, testing
-        - Deneyim: Faydalı programlar, yardımcı programlar
+        - Hünärmänlik: Kod häsiýeti, debugging, testing
+        - Tejribe: Peýdaly programmalar, kömekçi programmalar
         """
 
         # Zamana göre içerik türleri
-        self.wagta_bagly_temalar = {
-            "morning": ["cesaret", "günün_tavsiyesi", "sabah_işi", "kod_kalitesi"],
-            "noon": ["basit_açıklama", "kavram_tanıtımı", "iyi_pratikler", "framework_tanıtımı"],
-            "afternoon": ["problem_çözme", "debugging", "kod_düzeltme", "deneyim_paylaşımı"],
-            "evening": ["kariyer", "öğrenme_kaynakları", "kişisel_gelişim", "gelecek_hedefler"]
+       self.wagta_bagly_temalar = {
+            "morning": ["höweslendiriş", "günüň_maslahaty", "irden_iş", "kod_häsiýeti"],
+            "noon": ["ýönekeýje_düşündiriş", "şert_tanyşdyryş", "gowy_usullar", "framework_tanyşdyryş"],
+            "afternoon": ["mesele_çözmek", "debugging", "kod_düzetmek", "tejribe_paýlaşmak"],
+            "evening": ["karýera", "öwrenmek_çeşmeleri", "şahsy_ösüş", "geljekki_maksatlar"]
         }
 
     def get_time_of_day(self):
-        """Günün hangi zamanı olduğunu belirle"""
+        """Günüň haýsy wagty bolandygyny kesgitle"""
         current_hour = datetime.now(self.timezone).hour
 
         if 6 <= current_hour < 11:
@@ -121,7 +121,7 @@ class SoftwareBot:
             return "evening"
 
     def create_dynamic_prompt(self):
-        """Zamana ve rastgeleliğe göre dinamik prompt oluştur"""
+        """Wagta we tötänleýinlige görä dinamiki prompt döret"""
         current_time = datetime.now(self.timezone)
         time_of_day = self.get_time_of_day()
         day_name = current_time.strftime("%A")
@@ -134,48 +134,50 @@ class SoftwareBot:
         system_prompt = f"""
         {self.sen_hakynda}
 
-        MEVCUT DURUM:
-        - Tarih: {current_time.strftime('%d %B %Y')}
+        HÄZIRKI ÝAGDAÝ:
+        - Sene: {current_time.strftime('%d %B %Y')}
         - Gün: {day_name}
-        - Saat: {current_time.strftime('%H:%M')} (Türkmenistan)
-        - Günün Zamanı: {time_of_day}
-        - Seçilen Tema: {selected_theme}
+        - Sagat: {current_time.strftime('%H:%M')} (Türkmenistan)
+        - Günüň Wagty: {time_of_day}
+        - Saýlanan Tema: {selected_theme}
 
-        GÖREV:
-        Bu bilgileri göz önünde tutarak, şimdi kanala programlama ile ilgili okuyucuları cesaretlendirecek güzel bir makale yaz.
+        MESELE:
+        Bu maglumatlary göz öňünde tutup, häzir kanala programirleme bilen baglanyşykly okajaklary höweslendirjek gowja makalajyk ýaz.
 
-        KURALLAR:
-        1. Tamamen özgün içerik oluştur (şablon kullanma)
-        2. Bu zamana ve güne uygun ol
-        3. 120-200 kelime arasında yaz
-        4. Pratik, kullanılabilir bilgi ver
-        5. Cesaretlendirici ol
-        6. 2-3 emoji kullan (çok değil)
-        7. Hashtag ekleme (otomatik ekleyeceğim)
-        8. Kod örneği varsa ``` ile yaz
-        9. Gerçek deneyimlerinden bahset
-        10. Okuyucularla dostça konuş
-        11. ÖNEMLİ: Yeni başlayanlar ve orta seviyeli programcılar için anlaşılır yaz
-        12. Karmaşık terimler kullanma, basit açıklama ver
-        13. Temel terimleri İngilizce söyle
-        14. Örnekler getir ve göster
+        DÜZGÜNLER:
+        1. Doly we özboluşly mazmun döret (şablon ulanma)
+        2. Bu wagta we güne laýyk bol
+        3. 120-200 söz arasynda ýaz
+        4. Amaly, ulanylýan maglumat ber
+        5. Höweslendiriji bol
+        6. 2-3 emoji ulan (köp däl)
+        7. Hashtag goşma (awtomatiki goşaryn)
+        8. Kod mysaly bar bolsa ``` bilen ýaz
+        9. Hakyky tejribelerinden gürrüň ber
+        10. Okyjylar bilen dostlukly söhbetdeş bol
+        11. MÖHÜM: Täze başlaýanlar we orta derejeli programmistler üçin düşnükli ýaz
+        12. Çylşyrymly adalgalary ulanma, ýönekeý düşündiriş ber
+        13. Esasy adalgalary iňlis dilinde aýt
+        14. Mysallar getirip görkez.
 
-        YASAK ŞEYLER:
-        - "Merhaba dostlar" gibi şablon başlangıçlar
-        - Çok emoji
-        - Tekrarlanan kelimeler
-        - Yapay görünen dil
-        - Genel bilgiler
-        - Karmaşık teknik jargon
 
-        Kolay bir kod örnek getir ve açıkla ya da belirli bir tema hakkında şeyler öğret ya da belirli bir programlama dili hakkında ilginç gerçekler söyle. Ya da programcı olmak için mutlaka bilmesi gereken şeyler, kullanması gereken programlar hakkında söyle.
-        Şimdi harika içerik oluştur!
+        GADAGAN ZATLAR:
+        - "Salam dostlar" ýaly şablon başlangyjlar
+        - Köp emoji
+        - Gaýtalanýan sözler
+        - Emeli görünýän dil
+        - Umumy bilgiler
+        - Çylşyrymly tehniki jargon
+
+
+        Aňsatrak bir kod mysal getirip düşündir ýa-da belli bir tema boýunça zadlar öwret ýa-da bellir bir programirleme dili barada gyzykly faktlar aýdyp ber. Ýa-da programist bolmak üçin hökmany bilmeli zatlar, ulanmaly programmalar barada aýdyp ber. 
+        Häzir ajaýyp mazmun döret!
         """
 
         return system_prompt
 
     async def generate_content(self):
-        """Yapay zeka ile tamamen özgün içerik oluşturma"""
+        """Ýasama akyl bilen doly özboluşly mazmun döretmek"""
         try:
             # Dinamik prompt oluştur
             prompt = self.create_dynamic_prompt()
@@ -199,7 +201,7 @@ class SoftwareBot:
 
     def generate_smart_hashtags(self, content):
         """İçeriğe göre akıllı hashtag oluşturma"""
-        hashtags = ["#ProgramlamaYazımı", "#Kod", "#Öğrenme"]
+        hashtags = ["#ProgrammaYazmak", "#Kod", "#Öwrenmek"]
 
         # İçerikte geçen teknolojilere göre hashtag ekle
         tech_keywords = {
@@ -220,10 +222,10 @@ class SoftwareBot:
         # Zaman tabanlı hashtag
         time_of_day = self.get_time_of_day()
         time_hashtags = {
-            "morning": "#SabahMotivasyonu",
-            "noon": "#ÖğleÖğrenme",
-            "afternoon": "#İkindiZamanı",
-            "evening": "#AkşamDüşüncesi"
+            "morning": "#IrdenkiHöwes",
+            "noon": "#GünortaÖwrenmek",
+            "afternoon": "#IkindiWagt",
+            "evening": "#AgşamDüşünje"
         }
 
         if time_of_day in time_hashtags:
@@ -236,14 +238,14 @@ class SoftwareBot:
         current_time = datetime.now(self.timezone)
 
         fallback_messages = [
-            f"💡 Bu günlerde {current_time.strftime('%d %B')} tarihinde programlamada ne öğrendin?\n\nHer gün küçük adım — büyük başarıların anahtarı! Kod yazmanın en güzel yanları, sürekli yeni şeyler öğrenmektir 🚀",
+            f"💡 Şu günler {current_time.strftime('%d %B')} senesinde programma ýazmakda näme öwrendiň?\n\nHer gün kiçi ädim — uly üstünlikleriň açary! Kod ýazmagyň iň owadan taraplary, elmydama täze zatlary öwrenmekdir 🚀",
 
-            f"🤔 Şu an hangi teknoloji ile çalışıyorsun?\n\nBen bu günlerde kod gözden geçirirken şöyle düşündüm: En iyi kod sadece çalışan kod değil, başkalarının da kolay anlayabileceği kod! 📝",
+            f"🤔 Häzir haýsy tehnologiýa bilen işleýärsiň?\n\nMen şu günler kod gözden geçirýän wagtym şeýle pikir etdim: Iň gowy kod diňe işleýän kod däl, beýlekileriň hem aňsat düşünip bilýän kody! 📝",
 
-            f"⚡ Şu an {current_time.strftime('%H:%M')} — günün kod yazmaya gücün nasıl?\n\nBazen en iyi çözümler bilgisayarı kapattıktan sonra aklına gelir. Kafa karışıksa, kısa yürüyüş büyülü olabilir! 🚶‍♂️"
+            f"⚡ Şu wagt {current_time.strftime('%H:%M')} — günüň kod ýazmagyna güýjüň nähili?\n\nKäte iň gowy çözgütler kompýuteri ýapanyňdan soň aklyňa gelýär. Kelle bulaşyk bolsa, gysga gezelenç jadyly bolup biler! 🚶‍♂️"
         ]
 
-        hashtags = "#ProgramlamaYazımı #Kod #Motivasyon #Öğrenme"
+        hashtags = "#ProgrammaYazmak #Kod #Howeslendiris #Owrenmek"
 
         safe_base = random.choice(fallback_messages).replace("*", "").replace("_", "").replace("[", "").replace("]", "")
 
