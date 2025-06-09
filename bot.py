@@ -68,11 +68,11 @@ class ProgrammaBot:
         self.sen_hakynda = """
         Sen tejribeli programmist we tehnologiýa höweskäri bolan bot.
 
-        KIMLIGIŇ:
+        KIMSIŇ:
         - 5+ ýyllyk programma ýazmak tejribesi bolan developer
-        - Web, mobil, maglumat bazasy ýaly köp ugurda tejribeli
+        - Web, mobil, database ýaly köp ugurda tejribeli
         - Täze başlaýanlara we orta derejeli programmistlere kömek edýän
-        - Çylşyrymly zatlary ýönekeý düşündirip berýän
+        - Çylşyrymly zatlary ýönekeý düşündirip bilýän
         - Dostlukly, ýakyn ýöne professional gatnaşýan
 
         MAKSADYŇ:
@@ -101,10 +101,10 @@ class ProgrammaBot:
 
         # Wagta görä mazmun görnüşleri
         self.wagta_bagly_temalar = {
-            "ertir": ["höweslendiriş", "günüň_maslahaty", "irden_iş", "kod_häsiýeti"],
-            "günorta": ["ýönekeýje_düşündiriş", "şert_tanyşdyryş", "gowy_usullar", "framework_tanyşdyryş"],
+            "ertir": ["höweslendiriji", "günüň_maslahaty", "irden_iş", "kod_häsiýeti"],
+            "günorta": ["ýönekeýje_düşündiriş", "algoritma_tanyşdyryş", "gowy_usullar", "framework_tanyşdyryş"],
             "ikindi": ["mesele_çözmek", "debugging", "kod_düzetmek", "tejribe_paýlaşmak"],
-            "agşam": ["karýera", "öwrenmek_çeşmeleri", "şahsy_ösüş", "geljekki_maksatlar"]
+            "agşam": ["karýera", "öwrenmek_üçin_çeşmeler", "şahsy_ösüş", "geljekki_maksatlar"]
         }
 
     def günüň_wagty(self):
@@ -156,8 +156,8 @@ class ProgrammaBot:
         9. Hakyky tejribelerden gürrüň ber
         10. Okyjylar bilen dostlukly söhbetdeş bol
         11. MÖHÜM: Täze başlaýanlar we orta derejeli programmistler üçin düşnükli ýaz
-        12. Çylşyrymly terminleri ulanma, ýönekeý düşündiriş ber
-        13. Esasy terminleri iňlis dilinde aýt
+        12. Çylşyrymly adalgalary ulanma, ýönekeý düşündiriş ber
+        13. Esasy adalgalary iňlis dilinde aýt
         14. Mysallar getirip görkez
 
         GADAGAN ZATLAR:
@@ -168,14 +168,14 @@ class ProgrammaBot:
         - Umumy bilgiler
         - Çylşyrymly tehniki jargon
 
-        Ýeňil kod mysaly getirip düşündiriň ýa-da belli bir tema boýunça zatlar öwret ýa-da belli bir programmirlemek dili barada gyzykly faktlar aýdyp ber. Ýa-da programmist bolmak üçin hökmany bilmeli zatlar, ulanmaly programmalar barada aýdyp ber.
+        Aňsatrak bir kod mysaly getirip düşündir ýa-da belli bir tema boýunça zatlar öwret ýa-da belli bir programmirlemek dili barada gyzykly faktlar aýdyp ber. Ýa-da programmist bolmak üçin hökmany bilmeli zatlar, ulanmaly programmalar barada aýdyp ber.
         Häzir ajaýyp mazmun döret!
         """
 
         return ulgam_tabşyrygy
 
     async def mazmun_döret(self):
-        """Emeli akyl bilen doly özboluşly mazmun döretmek"""
+        """Emeli aň bilen doly özboluşly mazmun döretmek"""
         try:
             # Dinamiki tabşyryk döret
             tabşyryk = self.dinamiki_tabşyryk_döret()
@@ -220,10 +220,10 @@ class ProgrammaBot:
         # Wagta esaslanan hashtag
         günüň_wagty = self.günüň_wagty()
         wagt_hashtag_lary = {
-            "ertir": "#IrdenkiHöwes",
-            "günorta": "#GünortaÖwrenmek",
-            "ikindi": "#IkindiWagt",
-            "agşam": "#AgşamDüşünje"
+            "ertir": "#IrdenkiStart",
+            "günorta": "#ObetkiWork",
+            "ikindi": "#IkindiTime",
+            "agşam": "#AgşamkyIdea"
         }
 
         if günüň_wagty in wagt_hashtag_lary:
@@ -309,7 +309,7 @@ class ProgrammaBot:
 
 ---
 📅 **Gündelik Programma:**
-• 09:00 - Ertirki maslahat
+• 09:00 - Irdenki maslahat
 • 12:00 - Günortanlyk mazmun
 • 16:00 - Ikindi paýlaşymy
 • 21:00 - Agşam jemi
