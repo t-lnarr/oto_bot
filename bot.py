@@ -10,11 +10,30 @@ from telegram.error import TelegramError
 import schedule
 import time as time_module
 from dotenv import load_dotenv
+import threading
+from flask import Flask, jsonify
+import signal
+import sys
 
-# .env dosyasyny ýükle
+# .env dosyasını yükle (Railway ortam değişkenlerini de destekler)
 load_dotenv()
 
-# Logging sazlamalary
+# Flask app (Railway health check için)
+app = Flask(__name__)
+
+@app.route('/')
+def health_check():
+    return jsonify({
+        "status": "running",
+        "service": "telegram-bot",
+        "timestamp": datetime.now().isoformat()
+    })
+
+@app.route('/health')
+def health():
+    return jsonify({"status": "healthy"})
+
+# Logging ayarları
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -23,67 +42,73 @@ logger = logging.getLogger(__name__)
 
 class SoftwareBot:
     def __init__(self):
-        # Environment variables
+        # Environment variables (Railway otomatik olarak sağlar)
         self.bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-        self.channel_id = os.getenv('TELEGRAM_CHANNEL_ID')  # @kanaladi ýa-da -100xxxxxxxxx
+        self.channel_id = os.getenv('TELEGRAM_CHANNEL_ID')
         self.gemini_api_key = os.getenv('GEMINI_API_KEY')
+        
+        # Railway port (varsayılan 3000)
+        self.port = int(os.getenv('PORT', 3000))
 
         if not all([self.bot_token, self.channel_id, self.gemini_api_key]):
-            raise ValueError("Ähli environment variables-lary sazlaň!")
+            raise ValueError("Tüm environment variables'ları ayarlayın!")
 
-        # Bot we AI setup
+        # Bot ve AI kurulumu
         self.bot = Bot(token=self.bot_token)
         genai.configure(api_key=self.gemini_api_key)
         self.model = genai.GenerativeModel('models/gemini-1.5-flash')
 
         # Türkmenistan timezone
         self.timezone = pytz.timezone('Asia/Ashgabat')
+        
+        # Bot durumu
+        self.is_running = True
 
-        # Bot Şahsyýeti we Ulgam Prompt
+        # Bot Şahsiyeti ve Sistem Prompt
         self.sen_hakynda = """
-        Sen tejribeli programmist we tehnologiýa höweskäri bolan bot.
+        Sen tecrübeli programmist ve teknoloji meraklısı olan bot.
 
-        KIMSIŇ:
-        - 5+ ýyllyk programma ýazmak tejribesi bolan developer
-        - Web, mobile, database ýaly köp ugurda tejribeli
-        - Täze başlaýanlara we orta derejeli programmistlere kömek edýän
-        - Çylşyrymly zatlary ýönekeý düşündirip berýän
-        - Dostlukly, ýakyn ýöne professional gatnaşýan
+        KİMSİN:
+        - 5+ yıllık program yazma tecrübesi olan developer
+        - Web, mobile, database gibi çok alanda tecrübeli
+        - Yeni başlayanlara ve orta seviyeli programcılara yardım eden
+        - Karmaşık şeyleri basit açıklayan
+        - Dostane, yakın ama profesyonel davanan
 
-        MAKSADYŇ:
-        - Programma ýazyjylary üçin günde 4 gezek peýdaly mazmun paýlaşmak
-        - Okyjylara hakykatdanam peýdaly, amaly maglumatlary bermek
-        - Täze başlaýanlary we orta derejeli programmistleri höweslendirmek
-        - Ylham beriji, höweslendiriji bolmak
+        AMACIN:
+        - Program yazıcıları için günde 4 kez faydalı içerik paylaşmak
+        - Okuyuculara gerçekten faydalı, pratik bilgiler vermek
+        - Yeni başlayanları ve orta seviyeli programcıları cesaretlendirmek
+        - İlham verici, cesaretlendirici olmak
 
-        TARZYŇ:
-        - Dostlukly we ýakymly dil ulan
-        - Emoji ulan ýöne artykmaç däl
-        - Gysga, düşnükli we täsirli ýaz
-        - Amaly mysallar ber
-        - Hekaýa ýaly akyjy söhbetdeş bol
-        - Käwagt humor goş
+        TARZIN:
+        - Dostane ve yakın dil kullan
+        - Emoji kullan ama aşırı değil
+        - Kısa, anlaşılır ve etkili yaz
+        - Pratik örnekler ver
+        - Hikaye gibi akıcı konuş
+        - Bazen mizah kat
 
-        USSATLYK UGURLARYŇ:
-        - Frontend: HTML/CSS, JavaScript, React (başlangyç)
-        - Backend: Python, Node.js (ýönekeý)
-        - Database: MySQL, PostgreSQL (esasy)
-        - Gurallar: VS Code, Git (zerur)
+        UZMANLIK ALANLARIN:
+        - Frontend: HTML/CSS, JavaScript, React (başlangıç)
+        - Backend: Python, Node.js (basit)
+        - Database: MySQL, PostgreSQL (temel)
+        - Araçlar: VS Code, Git (gerekli)
         - Mobil: React Native, Flutter (giriş)
-        - Hünärmänlik: Kod häsiýeti, debugging, testing
-        - Tejribe: Peýdaly programmalar, kömekçi programmalar
+        - Mesleki: Kod kalitesi, debugging, testing
+        - Deneyim: Faydalı programlar, yardımcı programlar
         """
 
-        # Wagta görä mazmun görnüşleri (täze başlaýanlar üçin)
+        # Zamana göre içerik türleri
         self.wagta_bagly_temalar = {
-            "morning": ["höweslendiriş", "günüň_maslahaty", "irden_iş", "kod_häsiýeti"],
-            "noon": ["ýönekeýje_düşündiriş", "şert_tanyşdyryş", "gowy_usullar", "framework_tanyşdyryş"],
-            "afternoon": ["mesele_çözmek", "debugging", "kod_düzetmek", "tejribe_paýlaşmak"],
-            "evening": ["karýera", "öwrenmek_çeşmeleri", "şahsy_ösüş", "geljekki_maksatlar"]
+            "morning": ["cesaret", "günün_tavsiyesi", "sabah_işi", "kod_kalitesi"],
+            "noon": ["basit_açıklama", "kavram_tanıtımı", "iyi_pratikler", "framework_tanıtımı"],
+            "afternoon": ["problem_çözme", "debugging", "kod_düzeltme", "deneyim_paylaşımı"],
+            "evening": ["kariyer", "öğrenme_kaynakları", "kişisel_gelişim", "gelecek_hedefler"]
         }
 
     def get_time_of_day(self):
-        """Günüň haýsy wagty bolandygyny kesgitle"""
+        """Günün hangi zamanı olduğunu belirle"""
         current_hour = datetime.now(self.timezone).hour
 
         if 6 <= current_hour < 11:
@@ -96,89 +121,87 @@ class SoftwareBot:
             return "evening"
 
     def create_dynamic_prompt(self):
-        """Wagta we tötänleýinlige görä dinamiki prompt döret"""
+        """Zamana ve rastgeleliğe göre dinamik prompt oluştur"""
         current_time = datetime.now(self.timezone)
         time_of_day = self.get_time_of_day()
         day_name = current_time.strftime("%A")
 
-        # Wagta görä tema saýla
-        themes = self.wagta_bagly_temalar.get(time_of_day, ["umumy_programma"])
+        # Zamana göre tema seç
+        themes = self.wagta_bagly_temalar.get(time_of_day, ["genel_programlama"])
         selected_theme = random.choice(themes)
 
-        # Dinamiki ulgam prompt
+        # Dinamik sistem prompt
         system_prompt = f"""
         {self.sen_hakynda}
 
-        HÄZIRKI ÝAGDAÝ:
-        - Sene: {current_time.strftime('%d %B %Y')}
+        MEVCUT DURUM:
+        - Tarih: {current_time.strftime('%d %B %Y')}
         - Gün: {day_name}
-        - Sagat: {current_time.strftime('%H:%M')} (Türkmenistan)
-        - Günüň Wagty: {time_of_day}
-        - Saýlanan Tema: {selected_theme}
+        - Saat: {current_time.strftime('%H:%M')} (Türkmenistan)
+        - Günün Zamanı: {time_of_day}
+        - Seçilen Tema: {selected_theme}
 
-        MESELE:
-        Bu maglumatlary göz öňünde tutup, häzir kanala programirleme bilen baglanyşykly okajaklary höweslendirjek gowja makalajyk ýaz.
+        GÖREV:
+        Bu bilgileri göz önünde tutarak, şimdi kanala programlama ile ilgili okuyucuları cesaretlendirecek güzel bir makale yaz.
 
-        DÜZGÜNLER:
-        1. Doly we özboluşly mazmun döret (şablon ulanma)
-        2. Bu wagta we güne laýyk bol
-        3. 120-200 söz arasynda ýaz
-        4. Amaly, ulanylýan maglumat ber
-        5. Höweslendiriji bol
-        6. 2-3 emoji ulan (köp däl)
-        7. Hashtag goşma (awtomatiki goşaryn)
-        8. Kod mysaly bar bolsa ``` bilen ýaz
-        9. Hakyky tejribelerinden gürrüň ber
-        10. Okyjylar bilen dostlukly söhbetdeş bol
-        11. MÖHÜM: Täze başlaýanlar we orta derejeli programmistler üçin düşnükli ýaz
-        12. Çylşyrymly adalgalary ulanma, ýönekeý düşündiriş ber
-        13. Esasy adalgalary iňlis dilinde aýt
-        14. Mysallar getirip görkez.
+        KURALLAR:
+        1. Tamamen özgün içerik oluştur (şablon kullanma)
+        2. Bu zamana ve güne uygun ol
+        3. 120-200 kelime arasında yaz
+        4. Pratik, kullanılabilir bilgi ver
+        5. Cesaretlendirici ol
+        6. 2-3 emoji kullan (çok değil)
+        7. Hashtag ekleme (otomatik ekleyeceğim)
+        8. Kod örneği varsa ``` ile yaz
+        9. Gerçek deneyimlerinden bahset
+        10. Okuyucularla dostça konuş
+        11. ÖNEMLİ: Yeni başlayanlar ve orta seviyeli programcılar için anlaşılır yaz
+        12. Karmaşık terimler kullanma, basit açıklama ver
+        13. Temel terimleri İngilizce söyle
+        14. Örnekler getir ve göster
 
+        YASAK ŞEYLER:
+        - "Merhaba dostlar" gibi şablon başlangıçlar
+        - Çok emoji
+        - Tekrarlanan kelimeler
+        - Yapay görünen dil
+        - Genel bilgiler
+        - Karmaşık teknik jargon
 
-        GADAGAN ZATLAR:
-        - "Salam dostlar" ýaly şablon başlangyjlar
-        - Köp emoji
-        - Gaýtalanýan sözler
-        - Emeli görünýän dil
-        - Umumy bilgiler
-        - Çylşyrymly tehniki jargon
-
-
-        Aňsatrak bir kod mysal getirip düşündir ýa-da belli bir tema boýunça zadlar öwret ýa-da bellir bir programirleme dili barada gyzykly faktlar aýdyp ber. Ýa-da programist bolmak üçin hökmany bilmeli zatlar, ulanmaly programmalar barada aýdyp ber. 
-        Häzir ajaýyp mazmun döret!
+        Kolay bir kod örnek getir ve açıkla ya da belirli bir tema hakkında şeyler öğret ya da belirli bir programlama dili hakkında ilginç gerçekler söyle. Ya da programcı olmak için mutlaka bilmesi gereken şeyler, kullanması gereken programlar hakkında söyle.
+        Şimdi harika içerik oluştur!
         """
 
         return system_prompt
 
     async def generate_content(self):
-        """Ýasama akyl bilen doly özboluşly mazmun döretmek"""
+        """Yapay zeka ile tamamen özgün içerik oluşturma"""
         try:
-            # Dinamiki prompt döret
+            # Dinamik prompt oluştur
             prompt = self.create_dynamic_prompt()
 
-            # Mazmun döret
+            # İçerik oluştur
             response = self.model.generate_content(prompt)
             content = response.text.strip()
 
-            # Hashtag-lary akylly goş
+            # Hashtag'ları akıllı ekle
             hashtags = self.generate_smart_hashtags(content)
 
-            # Soňky mazmun
+            # Son içerik
             final_content = f"{content}\n\n{hashtags}"
 
             return final_content
 
         except Exception as e:
-            logger.error(f"Mazmun döretmek säwligi: {e}")
-            # Fallback - has akylly
+            logger.error(f"İçerik oluşturma hatası: {e}")
+            # Fallback - daha akıllı
             return self.get_fallback_content()
 
     def generate_smart_hashtags(self, content):
-        """Mazmuny görä akylly hashtag döretmek"""
-        hashtags = ["#ProgrammaYazmak", "#Kod", "#Öwrenmek"]
+        """İçeriğe göre akıllı hashtag oluşturma"""
+        hashtags = ["#ProgramlamaYazımı", "#Kod", "#Öğrenme"]
 
-        # Mazmuny geçen tehnologiýalara görä hashtag goş
+        # İçerikte geçen teknolojilere göre hashtag ekle
         tech_keywords = {
             "python": "#Python", "javascript": "#JavaScript", "react": "#React",
             "html": "#HTML", "css": "#CSS", "git": "#Git",
@@ -194,13 +217,13 @@ class SoftwareBot:
                 if len(hashtags) >= 5:  # Maksimum 5 hashtag
                     break
 
-        # Wagt esasly hashtag
+        # Zaman tabanlı hashtag
         time_of_day = self.get_time_of_day()
         time_hashtags = {
-            "morning": "#IrdenkiHöwes",
-            "noon": "#GünortaÖwrenmek",
-            "afternoon": "#IkindiWagt",
-            "evening": "#AgşamDüşünje"
+            "morning": "#SabahMotivasyonu",
+            "noon": "#ÖğleÖğrenme",
+            "afternoon": "#İkindiZamanı",
+            "evening": "#AkşamDüşüncesi"
         }
 
         if time_of_day in time_hashtags:
@@ -209,50 +232,48 @@ class SoftwareBot:
         return " ".join(hashtags)
 
     def get_fallback_content(self):
-        """Ýalňyşlyk ýagdaýynda ulanyljakly akylly fallback"""
+        """Hata durumunda kullanılacak akıllı fallback"""
         current_time = datetime.now(self.timezone)
 
         fallback_messages = [
-            f"💡 Şu günler {current_time.strftime('%d %B')} senesinde programma ýazmakda näme öwrendiň?\n\nHer gün kiçi ädim — uly üstünlikleriň açary! Kod ýazmagyň iň owadan taraplary, elmydama täze zatlary öwrenmekdir 🚀",
+            f"💡 Bu günlerde {current_time.strftime('%d %B')} tarihinde programlamada ne öğrendin?\n\nHer gün küçük adım — büyük başarıların anahtarı! Kod yazmanın en güzel yanları, sürekli yeni şeyler öğrenmektir 🚀",
 
-            f"🤔 Häzir haýsy tehnologiýa bilen işleýärsiň?\n\nMen şu günler kod gözden geçirýän wagtym şeýle pikir etdim: Iň gowy kod diňe işleýän kod däl, beýlekileriň hem aňsat düşünip bilýän kody! 📝",
+            f"🤔 Şu an hangi teknoloji ile çalışıyorsun?\n\nBen bu günlerde kod gözden geçirirken şöyle düşündüm: En iyi kod sadece çalışan kod değil, başkalarının da kolay anlayabileceği kod! 📝",
 
-            f"⚡ Şu wagt {current_time.strftime('%H:%M')} — günüň kod ýazmagyna güýjüň nähili?\n\nKäte iň gowy çözgütler kompýuteri ýapanyňdan soň aklyňa gelýär. Kelle bulaşyk bolsa, gysga gezelenç jadyly bolup biler! 🚶‍♂️"
+            f"⚡ Şu an {current_time.strftime('%H:%M')} — günün kod yazmaya gücün nasıl?\n\nBazen en iyi çözümler bilgisayarı kapattıktan sonra aklına gelir. Kafa karışıksa, kısa yürüyüş büyülü olabilir! 🚶‍♂️"
         ]
 
-        hashtags = "#ProgrammaYazmak #Kod #Howeslendiris #Owrenmek"
+        hashtags = "#ProgramlamaYazımı #Kod #Motivasyon #Öğrenme"
 
-        # Telegram'da sorun çıkarmaması için özel karakterleri koruyalım
         safe_base = random.choice(fallback_messages).replace("*", "").replace("_", "").replace("[", "").replace("]", "")
 
         return f"{safe_base}\n\n{hashtags}"
 
-
     async def send_message_to_channel(self, message):
-        """Kanala habar ibermek"""
+        """Kanala mesaj gönderme"""
         try:
             await self.bot.send_message(
                 chat_id=self.channel_id,
                 text=message,
                 parse_mode='Markdown'
             )
-            logger.info("Habar üstünlik bilen iberildi!")
+            logger.info("Mesaj başarıyla gönderildi!")
             return True
         except TelegramError as e:
-            logger.error(f"Telegram ýalňyşlygy: {e}")
+            logger.error(f"Telegram hatası: {e}")
             return False
         except Exception as e:
-            logger.error(f"Habar ibermek ýalňyşlygy: {e}")
+            logger.error(f"Mesaj gönderme hatası: {e}")
             return False
 
     async def send_scheduled_content(self):
-        """Wagtlaýyn mazmun ibermek - has akylly"""
-        logger.info("Akylly mazmun döredilýär...")
+        """Zamanlanmış içerik gönderme"""
+        logger.info("Akıllı içerik oluşturuluyor...")
 
         current_time = datetime.now(self.timezone)
         time_of_day = self.get_time_of_day()
 
-        # Wagt esasly başlyk emojilary
+        # Zaman tabanlı başlık emojileri
         time_emojis = {
             "morning": "🌅",
             "noon": "☀️",
@@ -260,124 +281,152 @@ class SoftwareBot:
             "evening": "🌙"
         }
 
-        # Mazmun döret
+        # İçerik oluştur
         content = await self.generate_content()
 
-        # Wagt maglumatyny goş (az görünýän)
+        # Zaman bilgisini ekle
         time_str = current_time.strftime("%H:%M")
         emoji = time_emojis.get(time_of_day, "💻")
 
-        # Soňky habar - has tebigy
+        # Son mesaj
         final_message = f"{emoji} {content}"
 
         success = await self.send_message_to_channel(final_message)
         if success:
-            logger.info(f"Akylly mazmun iberildi! [{time_str}]")
+            logger.info(f"Akıllı içerik gönderildi! [{time_str}]")
         else:
-            logger.error("Habar iberilmedi!")
+            logger.error("Mesaj gönderilemedi!")
 
     async def test_message(self):
-        """Test habary - tötänleýin mazmun döredýär"""
-        print("🤖 Test üçin tötänleýin mazmun döredilýär...")
+        """Test mesajı"""
+        print("🤖 Test için rastgele içerik oluşturuluyor...")
 
-        # Tötänleýin mazmun döret
         random_content = await self.generate_content()
 
-        # Test sözbaşy goş
-        test_content = f"""🧪 **TEST HABARY** - Bot Işleýär! 🎉
+        test_content = f"""🧪 **TEST MESAJI** - Bot Çalışıyor! 🎉
 
 {random_content}
 
 ---
-📅 **Gündelik Programma:**
-• 09:00 - Irden maslahat
-• 12:00 - Günortan mazmuny
-• 16:00 - Ikindi paýlaşymy
-• 21:00 - Agşam jemlemesi
+📅 **Günlük Program:**
+• 09:00 - Sabah tavsiyesi
+• 12:00 - Öğlen içeriği
+• 16:00 - İkindi paylaşımı
+• 21:00 - Akşam özeti
 
-#TestBot #ProgrammaBot #Kod"""
+#TestBot #ProgramBot #Kod"""
 
         success = await self.send_message_to_channel(test_content)
         if success:
-            print("✅ Test habary üstünlik bilen iberildi!")
+            print("✅ Test mesajı başarıyla gönderildi!")
         else:
-            print("❌ Test habary iberilmedi!")
+            print("❌ Test mesajı gönderilemedi!")
 
     def schedule_messages(self):
-        """Habar wagty bellemek"""
-        # Türkmenistan wagty bilen wagtlamak
+        """Mesaj zamanlaması"""
+        # Türkmenistan zamanı ile zamanlama
         schedule.every().day.at("09:00").do(lambda: asyncio.create_task(self.send_scheduled_content()))
         schedule.every().day.at("12:00").do(lambda: asyncio.create_task(self.send_scheduled_content()))
         schedule.every().day.at("16:00").do(lambda: asyncio.create_task(self.send_scheduled_content()))
         schedule.every().day.at("21:00").do(lambda: asyncio.create_task(self.send_scheduled_content()))
 
-        logger.info("Habar wagty bellendi!")
-        logger.info("Sagatlar: 09:00, 12:00, 16:00, 21:00 (Türkmenistan)")
+        logger.info("Mesaj zamanları ayarlandı!")
+        logger.info("Saatler: 09:00, 12:00, 16:00, 21:00 (Türkmenistan)")
+
+    async def run_scheduler(self):
+        """Zamanlayıcı döngüsü"""
+        while self.is_running:
+            schedule.run_pending()
+            await asyncio.sleep(60)  # Her dakika kontrol et
+
+    def run_flask_app(self):
+        """Flask uygulamasını çalıştır"""
+        app.run(host='0.0.0.0', port=self.port, debug=False)
 
     async def run(self):
-        """Bot işletmek"""
-        print("🤖 Programma Bot başlaýar...")
-
-        # Ilkinji test habary
+        """Bot çalıştırma - Railway için optimize edilmiş"""
+        print("🤖 Programlama Bot başlıyor...")
+        
+        # İlk test mesajı
         await self.test_message()
 
-        # Wagtlamalary sazla
+        # Zamanlamaları ayarla
         self.schedule_messages()
 
-        print("⏰ Bot wagtlaşdyrylan habarlar üçin garaşýar...")
-        print("📍 Sagatlar: 09:00, 12:00, 16:00, 21:00 (Türkmenistan)")
-        print("🛑 Durdurmak üçin Ctrl+C")
+        print("⏰ Bot zamanlanmış mesajlar için bekliyor...")
+        print("📍 Saatler: 09:00, 12:00, 16:00, 21:00 (Türkmenistan)")
+        print(f"🌐 Flask sunucusu port {self.port}'ta çalışıyor")
 
-        # Esasy aýlaw
-        while True:
-            schedule.run_pending()
-            await asyncio.sleep(60)  # Her minut barla
+        # Flask'ı ayrı thread'de çalıştır
+        flask_thread = threading.Thread(target=self.run_flask_app, daemon=True)
+        flask_thread.start()
 
-# El bilen synag funksiýalary
+        # Zamanlayıcıyı çalıştır
+        await self.run_scheduler()
+
+    def stop(self):
+        """Bot'u durdur"""
+        self.is_running = False
+        logger.info("Bot durduruluyor...")
+
+# Signal handler - Railway için
+def signal_handler(signum, frame):
+    logger.info(f"Signal {signum} alındı, bot durduruluyor...")
+    bot_instance.stop()
+    sys.exit(0)
+
+# Manuel test fonksiyonları
 async def send_test_now():
-    """Derrew test habary iber"""
+    """Hemen test mesajı gönder"""
     bot = SoftwareBot()
     await bot.test_message()
 
 async def send_random_content():
-    """Diňe tötänleýin mazmun iber (test sözbaşy bolmazdan)"""
+    """Sadece rastgele içerik gönder"""
     bot = SoftwareBot()
     await bot.send_scheduled_content()
 
 async def send_custom_message(message):
-    """Özboluşly habar iber"""
+    """Özel mesaj gönder"""
     bot = SoftwareBot()
     await bot.send_message_to_channel(message)
 
+# Global bot instance
+bot_instance = None
+
 if __name__ == "__main__":
     try:
-        bot = SoftwareBot()
+        bot_instance = SoftwareBot()
+        
+        # Signal handlers (Railway için)
+        signal.signal(signal.SIGTERM, signal_handler)
+        signal.signal(signal.SIGINT, signal_handler)
 
-        # Buýruk setiri argumentleri
+        # Komut satırı argümanları
         import sys
         if len(sys.argv) > 1:
             if sys.argv[1] == "test":
-                # Test habary iber (tötänleýin mazmunly)
+                # Test mesajı gönder
                 asyncio.run(send_test_now())
             elif sys.argv[1] == "random":
-                # Diňe tötänleýin mazmun iber
+                # Sadece rastgele içerik gönder
                 asyncio.run(send_random_content())
             elif sys.argv[1] == "message" and len(sys.argv) > 2:
-                # Özboluşly habar iber
+                # Özel mesaj gönder
                 custom_msg = " ".join(sys.argv[2:])
                 asyncio.run(send_custom_message(custom_msg))
             else:
-                print("Ulanyş:")
-                print("python bot.py          - Adaty işletmek")
-                print("python bot.py test     - Test habary iber (tötänleýin mazmunly)")
-                print("python bot.py random   - Diňe tötänleýin mazmun iber")
-                print("python bot.py message 'Habar mazmuny' - Özboluşly habar iber")
+                print("Kullanım:")
+                print("python bot.py          - Normal çalıştırma")
+                print("python bot.py test     - Test mesajı gönder")
+                print("python bot.py random   - Rastgele içerik gönder")
+                print("python bot.py message 'Mesaj içeriği' - Özel mesaj gönder")
         else:
-            # Adaty işletmek
-            asyncio.run(bot.run())
+            # Normal çalıştırma (Railway için)
+            asyncio.run(bot_instance.run())
 
     except KeyboardInterrupt:
-        print("\n🛑 Bot durdy!")
+        print("\n🛑 Bot durdu!")
     except Exception as e:
-        logger.error(f"Umumy ýalňyşlyk: {e}")
-        print(f"❌ Ýalňyşlyk: {e}")
+        logger.error(f"Genel hata: {e}")
+        print(f"❌ Hata: {e}")
