@@ -15,62 +15,62 @@ from flask import Flask, jsonify
 import signal
 import sys
 
-# .env dosyasını yükle (Railway ortam değişkenlerini de destekler)
+# .env faýlyny ýükle (Railway gurşaw üýtgeýjilerini hem goldaýar)
 load_dotenv()
 
-# Flask app (Railway health check için)
+# Flask app (Railway saglygy barlagy üçin)
 app = Flask(__name__)
 
 @app.route('/')
 def health_check():
     return jsonify({
-        "status": "running",
-        "service": "telegram-bot",
-        "timestamp": datetime.now().isoformat()
+        "status": "işleýär",
+        "hyzmat": "telegram-bot",
+        "wagt": datetime.now().isoformat()
     })
 
 @app.route('/health')
 def health():
-    return jsonify({"status": "healthy"})
+    return jsonify({"status": "sagdyn"})
 
-# Logging ayarları
+# Gündelik ýazgysy sazlamalary
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-class SoftwareBot:
+class ProgrammaBot:
     def __init__(self):
-        # Environment variables (Railway otomatik olarak sağlar)
+        # Gurşaw üýtgeýjileri (Railway awtomatiki üpjün edýär)
         self.bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
-        self.channel_id = os.getenv('TELEGRAM_CHANNEL_ID')
-        self.gemini_api_key = os.getenv('GEMINI_API_KEY')
-        
-        # Railway port (varsayılan 3000)
+        self.kanal_id = os.getenv('TELEGRAM_CHANNEL_ID')
+        self.gemini_api_açar = os.getenv('GEMINI_API_KEY')
+
+        # Railway porty (esasy 3000)
         self.port = int(os.getenv('PORT', 3000))
 
-        if not all([self.bot_token, self.channel_id, self.gemini_api_key]):
-            raise ValueError("Tüm environment variables'ları ayarlayın!")
+        if not all([self.bot_token, self.kanal_id, self.gemini_api_açar]):
+            raise ValueError("Ähli gurşaw üýtgeýjilerini sazlaň!")
 
-        # Bot ve AI kurulumu
+        # Bot we AI gurluşy
         self.bot = Bot(token=self.bot_token)
-        genai.configure(api_key=self.gemini_api_key)
+        genai.configure(api_key=self.gemini_api_açar)
         self.model = genai.GenerativeModel('models/gemini-1.5-flash')
 
-        # Türkmenistan timezone
-        self.timezone = pytz.timezone('Asia/Ashgabat')
-        
-        # Bot durumu
-        self.is_running = True
+        # Türkmenistan wagt zolagy
+        self.wagt_zolagy = pytz.timezone('Asia/Ashgabat')
 
-        # Bot Şahsiyeti ve Sistem Prompt
+        # Bot ýagdaýy
+        self.işleýär = True
+
+        # Bot Şahsyýeti we Ulgam Tabşyrygy
         self.sen_hakynda = """
         Sen tejribeli programmist we tehnologiýa höweskäri bolan bot.
 
-        KIMSIŇ:
+        KIMLIGIŇ:
         - 5+ ýyllyk programma ýazmak tejribesi bolan developer
-        - Web, mobile, database ýaly köp ugurda tejribeli
+        - Web, mobil, maglumat bazasy ýaly köp ugurda tejribeli
         - Täze başlaýanlara we orta derejeli programmistlere kömek edýän
         - Çylşyrymly zatlary ýönekeý düşündirip berýän
         - Dostlukly, ýakyn ýöne professional gatnaşýan
@@ -81,7 +81,7 @@ class SoftwareBot:
         - Täze başlaýanlary we orta derejeli programmistleri höweslendirmek
         - Ylham beriji, höweslendiriji bolmak
 
-        TARZYŇ:
+        STILIŇ:
         - Dostlukly we ýakymly dil ulan
         - Emoji ulan ýöne artykmaç däl
         - Gysga, düşnükli we täsirli ýaz
@@ -92,57 +92,57 @@ class SoftwareBot:
         USSATLYK UGURLARYŇ:
         - Frontend: HTML/CSS, JavaScript, React (başlangyç)
         - Backend: Python, Node.js (ýönekeý)
-        - Database: MySQL, PostgreSQL (esasy)
+        - Maglumat bazasy: MySQL, PostgreSQL (esasy)
         - Gurallar: VS Code, Git (zerur)
         - Mobil: React Native, Flutter (giriş)
         - Hünärmänlik: Kod häsiýeti, debugging, testing
         - Tejribe: Peýdaly programmalar, kömekçi programmalar
         """
 
-        # Zamana göre içerik türleri
-       self.wagta_bagly_temalar = {
-            "morning": ["höweslendiriş", "günüň_maslahaty", "irden_iş", "kod_häsiýeti"],
-            "noon": ["ýönekeýje_düşündiriş", "şert_tanyşdyryş", "gowy_usullar", "framework_tanyşdyryş"],
-            "afternoon": ["mesele_çözmek", "debugging", "kod_düzetmek", "tejribe_paýlaşmak"],
-            "evening": ["karýera", "öwrenmek_çeşmeleri", "şahsy_ösüş", "geljekki_maksatlar"]
+        # Wagta görä mazmun görnüşleri
+        self.wagta_bagly_temalar = {
+            "ertir": ["höweslendiriş", "günüň_maslahaty", "irden_iş", "kod_häsiýeti"],
+            "günorta": ["ýönekeýje_düşündiriş", "şert_tanyşdyryş", "gowy_usullar", "framework_tanyşdyryş"],
+            "ikindi": ["mesele_çözmek", "debugging", "kod_düzetmek", "tejribe_paýlaşmak"],
+            "agşam": ["karýera", "öwrenmek_çeşmeleri", "şahsy_ösüş", "geljekki_maksatlar"]
         }
 
-    def get_time_of_day(self):
+    def günüň_wagty(self):
         """Günüň haýsy wagty bolandygyny kesgitle"""
-        current_hour = datetime.now(self.timezone).hour
+        häzirki_sagat = datetime.now(self.wagt_zolagy).hour
 
-        if 6 <= current_hour < 11:
-            return "morning"
-        elif 11 <= current_hour < 16:
-            return "noon"
-        elif 16 <= current_hour < 20:
-            return "afternoon"
+        if 6 <= häzirki_sagat < 11:
+            return "ertir"
+        elif 11 <= häzirki_sagat < 16:
+            return "günorta"
+        elif 16 <= häzirki_sagat < 20:
+            return "ikindi"
         else:
-            return "evening"
+            return "agşam"
 
-    def create_dynamic_prompt(self):
-        """Wagta we tötänleýinlige görä dinamiki prompt döret"""
-        current_time = datetime.now(self.timezone)
-        time_of_day = self.get_time_of_day()
-        day_name = current_time.strftime("%A")
+    def dinamiki_tabşyryk_döret(self):
+        """Wagta we tötänleýinlige görä dinamiki tabşyryk döret"""
+        häzirki_wagt = datetime.now(self.wagt_zolagy)
+        günüň_wagty = self.günüň_wagty()
+        günüň_ady = häzirki_wagt.strftime("%A")
 
-        # Zamana göre tema seç
-        themes = self.wagta_bagly_temalar.get(time_of_day, ["genel_programlama"])
-        selected_theme = random.choice(themes)
+        # Wagta görä tema saýla
+        temalar = self.wagta_bagly_temalar.get(günüň_wagty, ["umumy_programma"])
+        saýlanan_tema = random.choice(temalar)
 
-        # Dinamik sistem prompt
-        system_prompt = f"""
+        # Dinamiki ulgam tabşyrygy
+        ulgam_tabşyrygy = f"""
         {self.sen_hakynda}
 
         HÄZIRKI ÝAGDAÝ:
-        - Sene: {current_time.strftime('%d %B %Y')}
-        - Gün: {day_name}
-        - Sagat: {current_time.strftime('%H:%M')} (Türkmenistan)
-        - Günüň Wagty: {time_of_day}
-        - Saýlanan Tema: {selected_theme}
+        - Sene: {häzirki_wagt.strftime('%d %B %Y')}
+        - Gün: {günüň_ady}
+        - Sagat: {häzirki_wagt.strftime('%H:%M')} (Türkmenistan)
+        - Günüň Wagty: {günüň_wagty}
+        - Saýlanan Tema: {saýlanan_tema}
 
         MESELE:
-        Bu maglumatlary göz öňünde tutup, häzir kanala programirleme bilen baglanyşykly okajaklary höweslendirjek gowja makalajyk ýaz.
+        Bu maglumatlary göz öňünde tutup, häzir kanala programmirlemek bilen bagly okyjylary höweslendirjek gowy mazmun ýaz.
 
         DÜZGÜNLER:
         1. Doly we özboluşly mazmun döret (şablon ulanma)
@@ -153,13 +153,12 @@ class SoftwareBot:
         6. 2-3 emoji ulan (köp däl)
         7. Hashtag goşma (awtomatiki goşaryn)
         8. Kod mysaly bar bolsa ``` bilen ýaz
-        9. Hakyky tejribelerinden gürrüň ber
+        9. Hakyky tejribelerden gürrüň ber
         10. Okyjylar bilen dostlukly söhbetdeş bol
         11. MÖHÜM: Täze başlaýanlar we orta derejeli programmistler üçin düşnükli ýaz
-        12. Çylşyrymly adalgalary ulanma, ýönekeý düşündiriş ber
-        13. Esasy adalgalary iňlis dilinde aýt
-        14. Mysallar getirip görkez.
-
+        12. Çylşyrymly terminleri ulanma, ýönekeý düşündiriş ber
+        13. Esasy terminleri iňlis dilinde aýt
+        14. Mysallar getirip görkez
 
         GADAGAN ZATLAR:
         - "Salam dostlar" ýaly şablon başlangyjlar
@@ -169,266 +168,265 @@ class SoftwareBot:
         - Umumy bilgiler
         - Çylşyrymly tehniki jargon
 
-
-        Aňsatrak bir kod mysal getirip düşündir ýa-da belli bir tema boýunça zadlar öwret ýa-da bellir bir programirleme dili barada gyzykly faktlar aýdyp ber. Ýa-da programist bolmak üçin hökmany bilmeli zatlar, ulanmaly programmalar barada aýdyp ber. 
+        Ýeňil kod mysaly getirip düşündiriň ýa-da belli bir tema boýunça zatlar öwret ýa-da belli bir programmirlemek dili barada gyzykly faktlar aýdyp ber. Ýa-da programmist bolmak üçin hökmany bilmeli zatlar, ulanmaly programmalar barada aýdyp ber.
         Häzir ajaýyp mazmun döret!
         """
 
-        return system_prompt
+        return ulgam_tabşyrygy
 
-    async def generate_content(self):
-        """Ýasama akyl bilen doly özboluşly mazmun döretmek"""
+    async def mazmun_döret(self):
+        """Emeli akyl bilen doly özboluşly mazmun döretmek"""
         try:
-            # Dinamik prompt oluştur
-            prompt = self.create_dynamic_prompt()
+            # Dinamiki tabşyryk döret
+            tabşyryk = self.dinamiki_tabşyryk_döret()
 
-            # İçerik oluştur
-            response = self.model.generate_content(prompt)
-            content = response.text.strip()
+            # Mazmun döret
+            jogap = self.model.generate_content(tabşyryk)
+            mazmun = jogap.text.strip()
 
-            # Hashtag'ları akıllı ekle
-            hashtags = self.generate_smart_hashtags(content)
+            # Hashtag'lary akylly goş
+            hashtag_lar = self.akylly_hashtag_döret(mazmun)
 
-            # Son içerik
-            final_content = f"{content}\n\n{hashtags}"
+            # Soňky mazmun
+            ahyrky_mazmun = f"{mazmun}\n\n{hashtag_lar}"
 
-            return final_content
+            return ahyrky_mazmun
 
         except Exception as e:
-            logger.error(f"İçerik oluşturma hatası: {e}")
-            # Fallback - daha akıllı
-            return self.get_fallback_content()
+            logger.error(f"Mazmun döretmekde ýalňyşlyk: {e}")
+            # Ätiýaçlyk - has akylly
+            return self.ätiýaçlyk_mazmun_al()
 
-    def generate_smart_hashtags(self, content):
-        """İçeriğe göre akıllı hashtag oluşturma"""
-        hashtags = ["#ProgrammaYazmak", "#Kod", "#Öwrenmek"]
+    def akylly_hashtag_döret(self, mazmun):
+        """Mazmuna görä akylly hashtag döretmek"""
+        hashtag_lar = ["#ProgrammaYazmak", "#Kod", "#Öwrenmek"]
 
-        # İçerikte geçen teknolojilere göre hashtag ekle
-        tech_keywords = {
+        # Mazmunyň içinde geçýän tehnologiýalara görä hashtag goş
+        tehno_açar_sözler = {
             "python": "#Python", "javascript": "#JavaScript", "react": "#React",
             "html": "#HTML", "css": "#CSS", "git": "#Git",
-            "api": "#API", "database": "#Database", "mysql": "#MySQL",
+            "api": "#API", "database": "#MaglumatBazasy", "mysql": "#MySQL",
             "mobil": "#MobilApp", "web": "#WebDev", "frontend": "#Frontend",
             "backend": "#Backend", "debugging": "#Debugging", "test": "#Testing"
         }
 
-        content_lower = content.lower()
-        for keyword, hashtag in tech_keywords.items():
-            if keyword in content_lower and hashtag not in hashtags:
-                hashtags.append(hashtag)
-                if len(hashtags) >= 5:  # Maksimum 5 hashtag
+        mazmun_kiçi = mazmun.lower()
+        for açar_söz, hashtag in tehno_açar_sözler.items():
+            if açar_söz in mazmun_kiçi and hashtag not in hashtag_lar:
+                hashtag_lar.append(hashtag)
+                if len(hashtag_lar) >= 5:  # Iň köp 5 hashtag
                     break
 
-        # Zaman tabanlı hashtag
-        time_of_day = self.get_time_of_day()
-        time_hashtags = {
-            "morning": "#IrdenkiHöwes",
-            "noon": "#GünortaÖwrenmek",
-            "afternoon": "#IkindiWagt",
-            "evening": "#AgşamDüşünje"
+        # Wagta esaslanan hashtag
+        günüň_wagty = self.günüň_wagty()
+        wagt_hashtag_lary = {
+            "ertir": "#IrdenkiHöwes",
+            "günorta": "#GünortaÖwrenmek",
+            "ikindi": "#IkindiWagt",
+            "agşam": "#AgşamDüşünje"
         }
 
-        if time_of_day in time_hashtags:
-            hashtags.append(time_hashtags[time_of_day])
+        if günüň_wagty in wagt_hashtag_lary:
+            hashtag_lar.append(wagt_hashtag_lary[günüň_wagty])
 
-        return " ".join(hashtags)
+        return " ".join(hashtag_lar)
 
-    def get_fallback_content(self):
-        """Hata durumunda kullanılacak akıllı fallback"""
-        current_time = datetime.now(self.timezone)
+    def ätiýaçlyk_mazmun_al(self):
+        """Ýalňyşlyk ýagdaýynda ulanylajak akylly ätiýaçlyk"""
+        häzirki_wagt = datetime.now(self.wagt_zolagy)
 
-        fallback_messages = [
-            f"💡 Şu günler {current_time.strftime('%d %B')} senesinde programma ýazmakda näme öwrendiň?\n\nHer gün kiçi ädim — uly üstünlikleriň açary! Kod ýazmagyň iň owadan taraplary, elmydama täze zatlary öwrenmekdir 🚀",
+        ätiýaçlyk_habarlar = [
+            f"💡 Şu günler {häzirki_wagt.strftime('%d %B')} senesinde programmirlemekde näme öwrendiň?\n\nHer gün kiçi ädim — uly üstünlikleriň açary! Kod ýazmagyn iň owadan taraplary, hemişe täze zatlar öwrenmekdir 🚀",
 
             f"🤔 Häzir haýsy tehnologiýa bilen işleýärsiň?\n\nMen şu günler kod gözden geçirýän wagtym şeýle pikir etdim: Iň gowy kod diňe işleýän kod däl, beýlekileriň hem aňsat düşünip bilýän kody! 📝",
 
-            f"⚡ Şu wagt {current_time.strftime('%H:%M')} — günüň kod ýazmagyna güýjüň nähili?\n\nKäte iň gowy çözgütler kompýuteri ýapanyňdan soň aklyňa gelýär. Kelle bulaşyk bolsa, gysga gezelenç jadyly bolup biler! 🚶‍♂️"
+            f"⚡ Şu wagt {häzirki_wagt.strftime('%H:%M')} — günüň kod ýazmagyna güýjüň nähili?\n\nKäte iň gowy çözgütler kompýuteri ýapanyňdan soň aklyňa gelýär. Kelle bulaşyk bolsa, gysga gezelenç jadyly bolup biler! 🚶‍♂️"
         ]
 
-        hashtags = "#ProgrammaYazmak #Kod #Howeslendiris #Owrenmek"
+        hashtag_lar = "#ProgrammaYazmak #Kod #Höweslendiriş #Öwrenmek"
 
-        safe_base = random.choice(fallback_messages).replace("*", "").replace("_", "").replace("[", "").replace("]", "")
+        howpsuz_esas = random.choice(ätiýaçlyk_habarlar).replace("*", "").replace("_", "").replace("[", "").replace("]", "")
 
-        return f"{safe_base}\n\n{hashtags}"
+        return f"{howpsuz_esas}\n\n{hashtag_lar}"
 
-    async def send_message_to_channel(self, message):
-        """Kanala mesaj gönderme"""
+    async def kanala_habar_iber(self, habar):
+        """Kanala habar ibermek"""
         try:
             await self.bot.send_message(
-                chat_id=self.channel_id,
-                text=message,
+                chat_id=self.kanal_id,
+                text=habar,
                 parse_mode='Markdown'
             )
-            logger.info("Mesaj başarıyla gönderildi!")
+            logger.info("Habar üstünlikli iberildi!")
             return True
         except TelegramError as e:
-            logger.error(f"Telegram hatası: {e}")
+            logger.error(f"Telegram ýalňyşlygy: {e}")
             return False
         except Exception as e:
-            logger.error(f"Mesaj gönderme hatası: {e}")
+            logger.error(f"Habar ibermekde ýalňyşlyk: {e}")
             return False
 
-    async def send_scheduled_content(self):
-        """Zamanlanmış içerik gönderme"""
-        logger.info("Akıllı içerik oluşturuluyor...")
+    async def meýilleşdirilen_mazmun_iber(self):
+        """Meýilleşdirilen mazmun ibermek"""
+        logger.info("Akylly mazmun döredilýär...")
 
-        current_time = datetime.now(self.timezone)
-        time_of_day = self.get_time_of_day()
+        häzirki_wagt = datetime.now(self.wagt_zolagy)
+        günüň_wagty = self.günüň_wagty()
 
-        # Zaman tabanlı başlık emojileri
-        time_emojis = {
-            "morning": "🌅",
-            "noon": "☀️",
-            "afternoon": "🌤️",
-            "evening": "🌙"
+        # Wagta esaslanan başlyk emojileri
+        wagt_emojileri = {
+            "ertir": "🌅",
+            "günorta": "☀️",
+            "ikindi": "🌤️",
+            "agşam": "🌙"
         }
 
-        # İçerik oluştur
-        content = await self.generate_content()
+        # Mazmun döret
+        mazmun = await self.mazmun_döret()
 
-        # Zaman bilgisini ekle
-        time_str = current_time.strftime("%H:%M")
-        emoji = time_emojis.get(time_of_day, "💻")
+        # Wagt maglumatyny goş
+        wagt_str = häzirki_wagt.strftime("%H:%M")
+        emoji = wagt_emojileri.get(günüň_wagty, "💻")
 
-        # Son mesaj
-        final_message = f"{emoji} {content}"
+        # Soňky habar
+        ahyrky_habar = f"{emoji} {mazmun}"
 
-        success = await self.send_message_to_channel(final_message)
-        if success:
-            logger.info(f"Akıllı içerik gönderildi! [{time_str}]")
+        üstünlik = await self.kanala_habar_iber(ahyrky_habar)
+        if üstünlik:
+            logger.info(f"Akylly mazmun iberildi! [{wagt_str}]")
         else:
-            logger.error("Mesaj gönderilemedi!")
+            logger.error("Habar iberilip bilmedi!")
 
-    async def test_message(self):
-        """Test mesajı"""
-        print("🤖 Test için rastgele içerik oluşturuluyor...")
+    async def synag_habary(self):
+        """Synag habary"""
+        print("🤖 Synag üçin tötänleýin mazmun döredilýär...")
 
-        random_content = await self.generate_content()
+        tötänleýin_mazmun = await self.mazmun_döret()
 
-        test_content = f"""🧪 **TEST MESAJI** - Bot Çalışıyor! 🎉
+        synag_mazmun = f"""🧪 **SYNAG HABARY** - Bot Işleýär! 🎉
 
-{random_content}
+{tötänleýin_mazmun}
 
 ---
-📅 **Günlük Program:**
-• 09:00 - Sabah tavsiyesi
-• 12:00 - Öğlen içeriği
-• 16:00 - İkindi paylaşımı
-• 21:00 - Akşam özeti
+📅 **Gündelik Programma:**
+• 09:00 - Ertirki maslahat
+• 12:00 - Günortanlyk mazmun
+• 16:00 - Ikindi paýlaşymy
+• 21:00 - Agşam jemi
 
-#TestBot #ProgramBot #Kod"""
+#SynagBot #ProgrammaBot #Kod"""
 
-        success = await self.send_message_to_channel(test_content)
-        if success:
-            print("✅ Test mesajı başarıyla gönderildi!")
+        üstünlik = await self.kanala_habar_iber(synag_mazmun)
+        if üstünlik:
+            print("✅ Synag habary üstünlikli iberildi!")
         else:
-            print("❌ Test mesajı gönderilemedi!")
+            print("❌ Synag habary iberilip bilmedi!")
 
-    def schedule_messages(self):
-        """Mesaj zamanlaması"""
-        # Türkmenistan zamanı ile zamanlama
-        schedule.every().day.at("09:00").do(lambda: asyncio.create_task(self.send_scheduled_content()))
-        schedule.every().day.at("12:00").do(lambda: asyncio.create_task(self.send_scheduled_content()))
-        schedule.every().day.at("16:00").do(lambda: asyncio.create_task(self.send_scheduled_content()))
-        schedule.every().day.at("21:00").do(lambda: asyncio.create_task(self.send_scheduled_content()))
+    def habarlary_meýilleşdir(self):
+        """Habar meýilleşdirmek"""
+        # Türkmenistan wagty bilen meýilleşdirmek
+        schedule.every().day.at("09:00").do(lambda: asyncio.create_task(self.meýilleşdirilen_mazmun_iber()))
+        schedule.every().day.at("12:00").do(lambda: asyncio.create_task(self.meýilleşdirilen_mazmun_iber()))
+        schedule.every().day.at("16:00").do(lambda: asyncio.create_task(self.meýilleşdirilen_mazmun_iber()))
+        schedule.every().day.at("21:00").do(lambda: asyncio.create_task(self.meýilleşdirilen_mazmun_iber()))
 
-        logger.info("Mesaj zamanları ayarlandı!")
-        logger.info("Saatler: 09:00, 12:00, 16:00, 21:00 (Türkmenistan)")
+        logger.info("Habar wagtlary düzüldi!")
+        logger.info("Sagatlar: 09:00, 12:00, 16:00, 21:00 (Türkmenistan)")
 
-    async def run_scheduler(self):
-        """Zamanlayıcı döngüsü"""
-        while self.is_running:
+    async def meýilleşdiriji_işlet(self):
+        """Meýilleşdiriji aýlawy"""
+        while self.işleýär:
             schedule.run_pending()
-            await asyncio.sleep(60)  # Her dakika kontrol et
+            await asyncio.sleep(60)  # Her minut barla
 
-    def run_flask_app(self):
-        """Flask uygulamasını çalıştır"""
+    def flask_programmany_işlet(self):
+        """Flask programmasyny işlet"""
         app.run(host='0.0.0.0', port=self.port, debug=False)
 
-    async def run(self):
-        """Bot çalıştırma - Railway için optimize edilmiş"""
-        print("🤖 Programlama Bot başlıyor...")
-        
-        # İlk test mesajı
-        await self.test_message()
+    async def işlet(self):
+        """Bot işletmek - Railway üçin optimizasiýa edildi"""
+        print("🤖 Programmirlemek Boty başlaýar...")
 
-        # Zamanlamaları ayarla
-        self.schedule_messages()
+        # Ilkinji synag habary
+        await self.synag_habary()
 
-        print("⏰ Bot zamanlanmış mesajlar için bekliyor...")
-        print("📍 Saatler: 09:00, 12:00, 16:00, 21:00 (Türkmenistan)")
-        print(f"🌐 Flask sunucusu port {self.port}'ta çalışıyor")
+        # Meýilleşdirmeleri düz
+        self.habarlary_meýilleşdir()
 
-        # Flask'ı ayrı thread'de çalıştır
-        flask_thread = threading.Thread(target=self.run_flask_app, daemon=True)
+        print("⏰ Bot meýilleşdirilen habarlar üçin garaşýar...")
+        print("📍 Sagatlar: 09:00, 12:00, 16:00, 21:00 (Türkmenistan)")
+        print(f"🌐 Flask serweri port {self.port}'da işleýär")
+
+        # Flask'y aýry thread'de işlet
+        flask_thread = threading.Thread(target=self.flask_programmany_işlet, daemon=True)
         flask_thread.start()
 
-        # Zamanlayıcıyı çalıştır
-        await self.run_scheduler()
+        # Meýilleşdirijini işlet
+        await self.meýilleşdiriji_işlet()
 
-    def stop(self):
-        """Bot'u durdur"""
-        self.is_running = False
-        logger.info("Bot durduruluyor...")
+    def dur(self):
+        """Bot'y dur"""
+        self.işleýär = False
+        logger.info("Bot durdurylylyar...")
 
-# Signal handler - Railway için
-def signal_handler(signum, frame):
-    logger.info(f"Signal {signum} alındı, bot durduruluyor...")
-    bot_instance.stop()
+# Signal handler - Railway üçin
+def signal_işleýjisi(signum, frame):
+    logger.info(f"Signal {signum} alyndy, bot durdurylylyar...")
+    bot_mysaly.dur()
     sys.exit(0)
 
-# Manuel test fonksiyonları
-async def send_test_now():
-    """Hemen test mesajı gönder"""
-    bot = SoftwareBot()
-    await bot.test_message()
+# El bilen synag funksiýalary
+async def häzir_synag_iber():
+    """Derrew synag habary iber"""
+    bot = ProgrammaBot()
+    await bot.synag_habary()
 
-async def send_random_content():
-    """Sadece rastgele içerik gönder"""
-    bot = SoftwareBot()
-    await bot.send_scheduled_content()
+async def tötänleýin_mazmun_iber():
+    """Diňe tötänleýin mazmun iber"""
+    bot = ProgrammaBot()
+    await bot.meýilleşdirilen_mazmun_iber()
 
-async def send_custom_message(message):
-    """Özel mesaj gönder"""
-    bot = SoftwareBot()
-    await bot.send_message_to_channel(message)
+async def özüň_habary_iber(habar):
+    """Özel habar iber"""
+    bot = ProgrammaBot()
+    await bot.kanala_habar_iber(habar)
 
-# Global bot instance
-bot_instance = None
+# Global bot mysaly
+bot_mysaly = None
 
 if __name__ == "__main__":
     try:
-        bot_instance = SoftwareBot()
-        
-        # Signal handlers (Railway için)
-        signal.signal(signal.SIGTERM, signal_handler)
-        signal.signal(signal.SIGINT, signal_handler)
+        bot_mysaly = ProgrammaBot()
 
-        # Komut satırı argümanları
+        # Signal handlers (Railway üçin)
+        signal.signal(signal.SIGTERM, signal_işleýjisi)
+        signal.signal(signal.SIGINT, signal_işleýjisi)
+
+        # Buýruk setiri argumentleri
         import sys
         if len(sys.argv) > 1:
-            if sys.argv[1] == "test":
-                # Test mesajı gönder
-                asyncio.run(send_test_now())
-            elif sys.argv[1] == "random":
-                # Sadece rastgele içerik gönder
-                asyncio.run(send_random_content())
-            elif sys.argv[1] == "message" and len(sys.argv) > 2:
-                # Özel mesaj gönder
-                custom_msg = " ".join(sys.argv[2:])
-                asyncio.run(send_custom_message(custom_msg))
+            if sys.argv[1] == "synag":
+                # Synag habary iber
+                asyncio.run(häzir_synag_iber())
+            elif sys.argv[1] == "tötänleýin":
+                # Diňe tötänleýin mazmun iber
+                asyncio.run(tötänleýin_mazmun_iber())
+            elif sys.argv[1] == "habar" and len(sys.argv) > 2:
+                # Özel habar iber
+                özüň_habary = " ".join(sys.argv[2:])
+                asyncio.run(özüň_habary_iber(özüň_habary))
             else:
-                print("Kullanım:")
-                print("python bot.py          - Normal çalıştırma")
-                print("python bot.py test     - Test mesajı gönder")
-                print("python bot.py random   - Rastgele içerik gönder")
-                print("python bot.py message 'Mesaj içeriği' - Özel mesaj gönder")
+                print("Ulanyş:")
+                print("python bot.py              - Adaty işletmek")
+                print("python bot.py synag        - Synag habary iber")
+                print("python bot.py tötänleýin   - Tötänleýin mazmun iber")
+                print("python bot.py habar 'Habar mazmuny' - Özel habar iber")
         else:
-            # Normal çalıştırma (Railway için)
-            asyncio.run(bot_instance.run())
+            # Adaty işletmek (Railway üçin)
+            asyncio.run(bot_mysaly.işlet())
 
     except KeyboardInterrupt:
-        print("\n🛑 Bot durdu!")
+        print("\n🛑 Bot durdy!")
     except Exception as e:
-        logger.error(f"Genel hata: {e}")
-        print(f"❌ Hata: {e}")
+        logger.error(f"Umumy ýalňyşlyk: {e}")
+        print(f"❌ Ýalňyşlyk: {e}")
